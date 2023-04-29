@@ -75,50 +75,50 @@ def oci_non_recls(trial_balance_2, fs_class, oci_items, oci_class_col, oci_class
     net_inc = {ac_cls: 'OCI_non_reclass', pr_yr: income_state[pr_yr].sum(), cur_yr: income_state[cur_yr].sum()}
     income_stmt = pd.concat([income_state, pd.DataFrame([net_inc])], ignore_index=True)
     return income_stmt
+#
+# def append_sum_row(df, df2, ac_cls, pri_yr, cur_yr, tot_name=""):
+#     """Helper function to append a summary row to a DataFrame"""
+#     row = {ac_cls: tot_name, pri_yr: df[pri_yr].sum(), cur_yr: df[cur_yr].sum()}
+#     df2 = pd.concat([df2, pd.DataFrame([row])], ignore_index=True)
+#     return df2
+#
+# def get_gross_profit(trial_bal, rev_frm_cus, cos_of_sale, ac_clss, ac_codes, pry_yr, curr_yr):
+#     rev_frm_cus = trial_bal[trial_bal[ac_clss] == rev_frm_cus]
+#     cos_of_sal = trial_bal[trial_bal[ac_clss] == cos_of_sale]
+#     grs_pro = pd.concat([rev_frm_cus, cos_of_sal], ignore_index=True)
+#     grs_pro = group_sum(grs_pro, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#     grs_pro = append_sum_row(grs_pro, grs_pro, ac_clss, pry_yr, curr_yr, tot_name="Gross Profit")
+#     return grs_pro
 
-def append_sum_row(df, df2, ac_cls, pri_yr, cur_yr, tot_name=""):
-    """Helper function to append a summary row to a DataFrame"""
-    row = {ac_cls: tot_name, pri_yr: df[pri_yr].sum(), cur_yr: df[cur_yr].sum()}
-    df2 = pd.concat([df2, pd.DataFrame([row])], ignore_index=True)
-    return df2
-
-def get_gross_profit(trial_bal, rev_frm_cus, cos_of_sale, ac_clss, ac_codes, pry_yr, curr_yr):
-    rev_frm_cus = trial_bal[trial_bal[ac_clss] == rev_frm_cus]
-    cos_of_sal = trial_bal[trial_bal[ac_clss] == cos_of_sale]
-    grs_pro = pd.concat([rev_frm_cus, cos_of_sal], ignore_index=True)
-    grs_pro = group_sum(grs_pro, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    grs_pro = append_sum_row(grs_pro, grs_pro, ac_clss, pry_yr, curr_yr, tot_name="Gross Profit")
-    return grs_pro
-
-def get_other_income_expenses(rev_name, ac_cls, ac_code, grs_pro, rev_frm_cus, cos_of_sale, fin_inc, int_exp,
-                              income_tax, pri_yr, cur_yr):
-    other_inc = rev_name[~rev_name[ac_cls].isin([rev_frm_cus, cos_of_sale, fin_inc, int_exp, income_tax])]
-    other_inc = group_sum(other_inc, ac_code, ac_cls, pri_yr, cur_yr, ascending_order=True)
-    opex2 = other_inc.copy()
-    opex2 = pd.concat([opex2, opex2.sum().to_frame().T], ignore_index=True)
-    net_opex = pd.concat([grs_pro.iloc[[-1]], opex2.iloc[[-1]]], ignore_index=True)
-    other_inc = append_sum_row(net_opex, other_inc, ac_cls, pri_yr, cur_yr, tot_name="Operating Profit/(loss)")
-    return other_inc
-
-def get_profit_before_tax(trial_bal, opr_pro, fin_inc, int_exp, ac_codes, ac_clss, pry_yr, curr_yr):
-    net_fin_inc = trial_bal[trial_bal[ac_clss].isin([fin_inc, int_exp])]
-    net_fin_inc = group_sum(net_fin_inc, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    net_fin_inc2 = net_fin_inc.copy()
-    net_fin_inc2 = pd.concat([net_fin_inc2, net_fin_inc2.sum().to_frame().T], ignore_index=True)
-    pbit_net = pd.concat([opr_pro.iloc[[-1]], net_fin_inc2.iloc[[-1]]], ignore_index=True)
-    net_fin_inc = append_sum_row(pbit_net, net_fin_inc, ac_clss, pry_yr, curr_yr,
-                                 tot_name="Profit/(loss) before tax")
-    return net_fin_inc
-
-def get_income_tax(trial_bal, net_fin_inc, inc_tax, ac_codes, ac_clss, pry_yr, curr_yr):
-    inc_tax = trial_bal[trial_bal[ac_clss].isin([inc_tax])]
-    inc_tax = group_sum(inc_tax, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-
-    inc_tax2 = inc_tax.copy()
-    inc_tax2 = pd.concat([inc_tax2, inc_tax2.sum().to_frame().T], ignore_index=True)
-    pat_net = pd.concat([net_fin_inc.iloc[[-1]], inc_tax2.iloc[[-1]]], ignore_index=True)
-    inc_tax = append_sum_row(pat_net, inc_tax, ac_clss, pry_yr, curr_yr, tot_name="Profit/(loss) after tax")
-    return inc_tax
+# def get_other_income_expenses(rev_name, ac_cls, ac_code, grs_pro, rev_frm_cus, cos_of_sale, fin_inc, int_exp,
+#                               income_tax, pri_yr, cur_yr):
+#     other_inc = rev_name[~rev_name[ac_cls].isin([rev_frm_cus, cos_of_sale, fin_inc, int_exp, income_tax])]
+#     other_inc = group_sum(other_inc, ac_code, ac_cls, pri_yr, cur_yr, ascending_order=True)
+#     opex2 = other_inc.copy()
+#     opex2 = pd.concat([opex2, opex2.sum().to_frame().T], ignore_index=True)
+#     net_opex = pd.concat([grs_pro.iloc[[-1]], opex2.iloc[[-1]]], ignore_index=True)
+#     other_inc = append_sum_row(net_opex, other_inc, ac_cls, pri_yr, cur_yr, tot_name="Operating Profit/(loss)")
+#     return other_inc
+#
+# def get_profit_before_tax(trial_bal, opr_pro, fin_inc, int_exp, ac_codes, ac_clss, pry_yr, curr_yr):
+#     net_fin_inc = trial_bal[trial_bal[ac_clss].isin([fin_inc, int_exp])]
+#     net_fin_inc = group_sum(net_fin_inc, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#     net_fin_inc2 = net_fin_inc.copy()
+#     net_fin_inc2 = pd.concat([net_fin_inc2, net_fin_inc2.sum().to_frame().T], ignore_index=True)
+#     pbit_net = pd.concat([opr_pro.iloc[[-1]], net_fin_inc2.iloc[[-1]]], ignore_index=True)
+#     net_fin_inc = append_sum_row(pbit_net, net_fin_inc, ac_clss, pry_yr, curr_yr,
+#                                  tot_name="Profit/(loss) before tax")
+#     return net_fin_inc
+#
+# def get_income_tax(trial_bal, net_fin_inc, inc_tax, ac_codes, ac_clss, pry_yr, curr_yr):
+#     inc_tax = trial_bal[trial_bal[ac_clss].isin([inc_tax])]
+#     inc_tax = group_sum(inc_tax, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#
+#     inc_tax2 = inc_tax.copy()
+#     inc_tax2 = pd.concat([inc_tax2, inc_tax2.sum().to_frame().T], ignore_index=True)
+#     pat_net = pd.concat([net_fin_inc.iloc[[-1]], inc_tax2.iloc[[-1]]], ignore_index=True)
+#     inc_tax = append_sum_row(pat_net, inc_tax, ac_clss, pry_yr, curr_yr, tot_name="Profit/(loss) after tax")
+#     return inc_tax
 
 def get_oci_recls(trial_bal, oci_cls_col, oci_clss, ac_codes, ac_clss, pry_yr, curr_yr):
     oci_itms = trial_bal[~trial_bal[oci_cls_col].isin([oci_clss])]
@@ -141,29 +141,39 @@ def get_oci(trial_bal, oci_recls, pr_af_tx, oci_cls_col, oci_clss, ac_codes, ac_
                                   tot_name="Total comprehensive income")
     return tot_comp_inc
 
-def create_income_statement(grs_pro, opex, net_fin_inc, inc_tax, oci_2, oci_nrcl, ac_cls):
-    income_stmt = pd.concat([grs_pro, pd.DataFrame(index=range(1)), opex, pd.DataFrame(index=range(1)),
-                             net_fin_inc, pd.DataFrame(index=range(1)), inc_tax, pd.DataFrame(index=range(2)), oci_2,
-                             pd.DataFrame(index=range(2)), oci_nrcl], ignore_index=True)
-    income_stmt = income_stmt.rename(columns={ac_cls: 'Income Statement'})
-    return income_stmt
+# def create_income_statement(grs_pro, opex, net_fin_inc, inc_tax, oci_2, oci_nrcl, ac_cls):
+#     income_stmt = pd.concat([grs_pro, pd.DataFrame(index=range(1)), opex, pd.DataFrame(index=range(1)),
+#                              net_fin_inc, pd.DataFrame(index=range(1)), inc_tax, pd.DataFrame(index=range(2)), oci_2,
+#                              pd.DataFrame(index=range(2)), oci_nrcl], ignore_index=True)
+#     income_stmt = income_stmt.rename(columns={ac_cls: 'Income Statement'})
+#     return income_stmt
 
-def det_inc_stmt(trial_balance_2, fs_class="", p_and_l_items="", oci_items="", rev_frm_customer="", cos_of_sales="",
-                 fin_income="", int_expense="", income_tax="", oci_class_col=None, oci_class=None,
-                 ac_cls="", ac_code="", pri_yr="", cur_yr=""):
-    trial_balance_2.columns = trial_balance_2.columns.astype(str)
-    trial_balance = trial_balance_2[trial_balance_2[fs_class] == p_and_l_items]
-    trial_balance_3 = trial_balance_2[trial_balance_2[fs_class] == oci_items]
+# def det_inc_stmt(trial_balance_2, fs_class="", p_and_l_items="", oci_items="", rev_frm_customer="", cos_of_sales="",
+#                  fin_income="", int_expense="", income_tax="", oci_class_col=None, oci_class=None,
+#                  ac_cls="", ac_code="", pri_yr="", cur_yr=""):
+#     trial_balance_2.columns = trial_balance_2.columns.astype(str)
+#     trial_balance = trial_balance_2[trial_balance_2[fs_class] == p_and_l_items]
+#     trial_balance_3 = trial_balance_2[trial_balance_2[fs_class] == oci_items]
+#
+#     gross_profit = get_gross_profit(trial_balance, rev_frm_customer, cos_of_sales, ac_cls, ac_code, pri_yr, cur_yr)
+#     oth_inc = get_other_income_expenses(trial_balance, ac_cls, ac_code, gross_profit, rev_frm_customer, cos_of_sales,
+#                                         fin_income, int_expense, income_tax, pri_yr, cur_yr)
+#     ebt = get_profit_before_tax(trial_balance, oth_inc, fin_income, int_expense, ac_code, ac_cls, pri_yr, cur_yr)
+#     pat = get_income_tax(trial_balance, ebt, income_tax, ac_code, ac_cls, pri_yr, cur_yr)
+#     oci_2 = get_oci_recls(trial_balance_3, oci_class_col, oci_class, ac_code, ac_cls, pri_yr, cur_yr)
+#     oci_1 = get_oci(trial_balance_3, oci_2, pat, oci_class_col, oci_class, ac_code, ac_cls, pri_yr, cur_yr)
+#     income_statement = create_income_statement(gross_profit, oth_inc, ebt, pat, oci_2, oci_1, ac_cls)
+#
+#     return income_statement
 
-    gross_profit = get_gross_profit(trial_balance, rev_frm_customer, cos_of_sales, ac_cls, ac_code, pri_yr, cur_yr)
-    oth_inc = get_other_income_expenses(trial_balance, ac_cls, ac_code, gross_profit, rev_frm_customer, cos_of_sales,
-                                        fin_income, int_expense, income_tax, pri_yr, cur_yr)
-    ebt = get_profit_before_tax(trial_balance, oth_inc, fin_income, int_expense, ac_code, ac_cls, pri_yr, cur_yr)
-    pat = get_income_tax(trial_balance, ebt, income_tax, ac_code, ac_cls, pri_yr, cur_yr)
-    oci_2 = get_oci_recls(trial_balance_3, oci_class_col, oci_class, ac_code, ac_cls, pri_yr, cur_yr)
-    oci_1 = get_oci(trial_balance_3, oci_2, pat, oci_class_col, oci_class, ac_code, ac_cls, pri_yr, cur_yr)
-    income_statement = create_income_statement(gross_profit, oth_inc, ebt, pat, oci_2, oci_1, ac_cls)
-
+def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding):
+    grs_pro = get_gross_profit(tb, ac_cls, revenue, cos_of_sale, fs_class, p_and_l, ac_code, num_conv, rounding)
+    opr_pr_los = get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, grs_pro)
+    pr_b4_tx = get_profit_before_tax(tb, ac_cls, fin_income, int_expense, fs_class, p_and_l, ac_code, num_conv, rounding, opr_pr_los)
+    pr_af_tax = get_income_tax(tb, ac_cls, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, pr_b4_tx)
+    oci_to_be_reclass = None
+    oci_nrcl = None
+    income_statement = create_income_statement(grs_pro, opr_pr_los, pr_b4_tx, pr_af_tax, oci_to_be_reclass, oci_nrcl)
     return income_statement
 
 def get_non_curr_asset(trial_bal, ac_type, non_curr_ass, ac_clss, ac_codes, pry_yr, curr_yr):
