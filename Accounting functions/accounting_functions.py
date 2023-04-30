@@ -22,59 +22,51 @@ def inc_stmt(df, fs_class, p_and_l_items, ac_code, ac_cls, num_conv, rounding=0,
                           positive=positive, sort_order=True, sum_row=sum_r)
     return result
 
+def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, oci_rcls, oci_nrcl,
+                 fs_class, p_and_l, ac_code, num_conv, rounding):
+    grs_pro = get_gross_profit(tb, ac_cls, revenue, cos_of_sale, fs_class, p_and_l, ac_code, num_conv, rounding)
+    opr_pr_los = get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax,
+                                  fs_class, p_and_l, ac_code, num_conv, rounding, grs_pro)
+    pr_b4_tx = get_profit_before_tax(tb, ac_cls, fin_income, int_expense, fs_class, p_and_l,
+                                     ac_code, num_conv, rounding, opr_pr_los)
+    pr_af_tax = get_income_tax(tb, ac_cls, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, pr_b4_tx)
+    oci_nrcl = get_oci_no_reclass(tb, ac_cls, fs_class, oci_nrcl, ac_code, num_conv, rounding, pr_af_tax, oci_rcls)
+    oci_reclass = get_oci_reclass(tb, ac_cls, fs_class, oci_rcls, ac_code, num_conv, rounding, pr_af_tax, oci_nrcl)
 
-def group_sum(df, ac_code, ac_cls, pri_yr, cur_yr, ascending_order=True):
-    """
-    Groups a dataframe by a specified column, calculates the sum of another specified column, and sorts by a third
-    specified column.
-    """
-    df = df.copy()
-    df.drop(ac_code, axis=1, inplace=True)
-    df = df.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr], ascending=ascending_order)
-    df[[pri_yr, cur_yr]] *= -1
-    df = pd.DataFrame(df.to_records())
-    return df
+    income_statement = create_income_statement(grs_pro, opr_pr_los, pr_b4_tx, pr_af_tax, oci_nrcl, oci_reclass)
 
-def group_sum_bs(df, ac_code, ac_cls, cur_yr, ascending_order=False):
-    """
-    Groups a dataframe by a specified column, calculates the sum of another specified column, and sorts by a third
-    specified column.
-    """
-    df = df.copy()
-    df.drop(ac_code, axis=1, inplace=True)
-    df = df.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr], ascending=ascending_order)
-    df = pd.DataFrame(df.to_records())
-    return df
+    numeric_cols_2 = income_statement.select_dtypes(include=['number'])
+    if rounding == 0:
+        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(int)
+    else:
+        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(float)
+    income_statement[numeric_cols_2.columns] = numeric_cols_2
 
-def oci_reclass(trial_balance_2, fs_class="", oci_items="", oci_class_col="", oci_class="", ac_code="", ac_cls="", cur_yr="", pr_yr=""):
+    return income_statement
 
-    trial_balance_2.columns = trial_balance_2.columns.astype(str)
-    trial_balance = trial_balance_2[(trial_balance_2[fs_class] == oci_items) & ~(trial_balance_2[oci_class_col] == oci_class)]
+# def group_sum(df, ac_code, ac_cls, pri_yr, cur_yr, ascending_order=True):
+#     """
+#     Groups a dataframe by a specified column, calculates the sum of another specified column, and sorts by a third
+#     specified column.
+#     """
+#     df = df.copy()
+#     df.drop(ac_code, axis=1, inplace=True)
+#     df = df.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr], ascending=ascending_order)
+#     df[[pri_yr, cur_yr]] *= -1
+#     df = pd.DataFrame(df.to_records())
+#     return df
 
-    income_state = trial_balance.copy()
-    income_state.drop(ac_code, axis=1, inplace=True)
-    income_state = income_state.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr])
-    income_state[[pr_yr, cur_yr]] *= -1
-    income_state = pd.DataFrame(income_state.to_records())
+# def group_sum_bs(df, ac_code, ac_cls, cur_yr, ascending_order=False):
+#     """
+#     Groups a dataframe by a specified column, calculates the sum of another specified column, and sorts by a third
+#     specified column.
+#     """
+#     df = df.copy()
+#     df.drop(ac_code, axis=1, inplace=True)
+#     df = df.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr], ascending=ascending_order)
+#     df = pd.DataFrame(df.to_records())
+#     return df
 
-    net_inc = {ac_cls: 'OCI_reclass', pr_yr: income_state[pr_yr].sum(), cur_yr: income_state[cur_yr].sum()}
-    income_stmt = pd.concat([income_state, pd.DataFrame([net_inc])], ignore_index=True)
-    return income_stmt
-
-def oci_non_recls(trial_balance_2, fs_class, oci_items, oci_class_col, oci_class, ac_code, ac_cls, cur_yr, pr_yr):
-
-    trial_balance_2.columns = trial_balance_2.columns.astype(str)
-    trial_balance = trial_balance_2[(trial_balance_2[fs_class] == oci_items) & (trial_balance_2[oci_class_col] == oci_class)]
-
-    income_state = trial_balance.copy()
-    income_state.drop(ac_code, axis=1, inplace=True)
-    income_state = income_state.groupby(by=[ac_cls]).sum().sort_values(by=[cur_yr])
-    income_state[[pr_yr, cur_yr]] *= -1
-    income_state = pd.DataFrame(income_state.to_records())
-
-    net_inc = {ac_cls: 'OCI_non_reclass', pr_yr: income_state[pr_yr].sum(), cur_yr: income_state[cur_yr].sum()}
-    income_stmt = pd.concat([income_state, pd.DataFrame([net_inc])], ignore_index=True)
-    return income_stmt
 #
 # def append_sum_row(df, df2, ac_cls, pri_yr, cur_yr, tot_name=""):
 #     """Helper function to append a summary row to a DataFrame"""
@@ -120,26 +112,6 @@ def oci_non_recls(trial_balance_2, fs_class, oci_items, oci_class_col, oci_class
 #     inc_tax = append_sum_row(pat_net, inc_tax, ac_clss, pry_yr, curr_yr, tot_name="Profit/(loss) after tax")
 #     return inc_tax
 
-def get_oci_recls(trial_bal, oci_cls_col, oci_clss, ac_codes, ac_clss, pry_yr, curr_yr):
-    oci_itms = trial_bal[~trial_bal[oci_cls_col].isin([oci_clss])]
-    oci_itms = group_sum(oci_itms, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    oci_itms = append_sum_row(oci_itms, oci_itms, ac_clss, pry_yr, curr_yr,
-                              tot_name="")
-    return oci_itms
-
-
-def get_oci(trial_bal, oci_recls, pr_af_tx, oci_cls_col, oci_clss, ac_codes, ac_clss, pry_yr, curr_yr):
-    oci_itms = trial_bal[trial_bal[oci_cls_col] == oci_clss]
-    oci_itms = group_sum(oci_itms, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    oci_itms_2 = oci_itms.copy()
-    oci_itms_2 = pd.concat([oci_itms_2, oci_itms_2.sum().to_frame().T], ignore_index=True)
-    net_oci = pd.concat([oci_recls.iloc[[-1]], oci_itms_2.iloc[[-1]]], ignore_index=True)
-    oci_itms = append_sum_row(net_oci, oci_itms, ac_clss, pry_yr, curr_yr,
-                              tot_name="Total other comprehensive income")
-    tot_comp_inc = pd.concat([pr_af_tx.iloc[[-1]], oci_itms.iloc[[-1]]], ignore_index=True)
-    tot_comp_inc = append_sum_row(tot_comp_inc, oci_itms, ac_clss, pry_yr, curr_yr,
-                                  tot_name="Total comprehensive income")
-    return tot_comp_inc
 
 # def create_income_statement(grs_pro, opex, net_fin_inc, inc_tax, oci_2, oci_nrcl, ac_cls):
 #     income_stmt = pd.concat([grs_pro, pd.DataFrame(index=range(1)), opex, pd.DataFrame(index=range(1)),
@@ -166,106 +138,96 @@ def get_oci(trial_bal, oci_recls, pr_af_tx, oci_cls_col, oci_clss, ac_codes, ac_
 #
 #     return income_statement
 
-def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding):
-    grs_pro = get_gross_profit(tb, ac_cls, revenue, cos_of_sale, fs_class, p_and_l, ac_code, num_conv, rounding)
-    opr_pr_los = get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, grs_pro)
-    pr_b4_tx = get_profit_before_tax(tb, ac_cls, fin_income, int_expense, fs_class, p_and_l, ac_code, num_conv, rounding, opr_pr_los)
-    pr_af_tax = get_income_tax(tb, ac_cls, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, pr_b4_tx)
-    oci_to_be_reclass = None
-    oci_nrcl = None
-    income_statement = create_income_statement(grs_pro, opr_pr_los, pr_b4_tx, pr_af_tax, oci_to_be_reclass, oci_nrcl)
-    return income_statement
+# def get_non_curr_asset(trial_bal, ac_type, non_curr_ass, ac_clss, ac_codes, pry_yr, curr_yr):
+#     nca = trial_bal[trial_bal[ac_type] == non_curr_ass]
+#     nca = group_sum_bs(nca, ac_codes, ac_clss, curr_yr, ascending_order=False)
+#     nca = append_sum_row(nca, nca, ac_clss, pry_yr, curr_yr, tot_name="Total Non-current assets")
+#     return nca
 
-def get_non_curr_asset(trial_bal, ac_type, non_curr_ass, ac_clss, ac_codes, pry_yr, curr_yr):
-    nca = trial_bal[trial_bal[ac_type] == non_curr_ass]
-    nca = group_sum_bs(nca, ac_codes, ac_clss, curr_yr, ascending_order=False)
-    nca = append_sum_row(nca, nca, ac_clss, pry_yr, curr_yr, tot_name="Total Non-current assets")
-    return nca
+# def get_curr_asset(trial_bal, ac_type, nca, curr_ass, ac_clss, ac_codes, pry_yr, curr_yr):
+#     cur_asst = trial_bal[trial_bal[ac_type] == curr_ass]
+#     cur_asst = group_sum_bs(cur_asst, ac_codes, ac_clss, curr_yr, ascending_order=False)
+#     cur_asst = append_sum_row(cur_asst, cur_asst, ac_clss, pry_yr, curr_yr, tot_name="Total Current assets")
+#     tot_ass = pd.concat([nca.iloc[[-1]], cur_asst.iloc[[-1]]], ignore_index=True)
+#     cur_asst = append_sum_row(tot_ass, cur_asst, ac_clss, pry_yr, curr_yr, tot_name="Total Assets")
+#     return cur_asst
 
-def get_curr_asset(trial_bal, ac_type, nca, curr_ass, ac_clss, ac_codes, pry_yr, curr_yr):
-    cur_asst = trial_bal[trial_bal[ac_type] == curr_ass]
-    cur_asst = group_sum_bs(cur_asst, ac_codes, ac_clss, curr_yr, ascending_order=False)
-    cur_asst = append_sum_row(cur_asst, cur_asst, ac_clss, pry_yr, curr_yr, tot_name="Total Current assets")
-    tot_ass = pd.concat([nca.iloc[[-1]], cur_asst.iloc[[-1]]], ignore_index=True)
-    cur_asst = append_sum_row(tot_ass, cur_asst, ac_clss, pry_yr, curr_yr, tot_name="Total Assets")
-    return cur_asst
+# def get_non_curr_liab(trial_bal, ac_type, non_curr_liab, ac_clss, ac_codes, pry_yr, curr_yr):
+#     ncl = trial_bal[trial_bal[ac_type] == non_curr_liab]
+#     ncl = group_sum(ncl, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#     ncl = append_sum_row(ncl, ncl, ac_clss, pry_yr, curr_yr, tot_name="Total Non-current liabilities")
+#     return ncl
 
-def get_non_curr_liab(trial_bal, ac_type, non_curr_liab, ac_clss, ac_codes, pry_yr, curr_yr):
-    ncl = trial_bal[trial_bal[ac_type] == non_curr_liab]
-    ncl = group_sum(ncl, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    ncl = append_sum_row(ncl, ncl, ac_clss, pry_yr, curr_yr, tot_name="Total Non-current liabilities")
-    return ncl
-
-def get_curr_liab(trial_bal, ac_type, ncl, curr_liab, ac_clss, ac_codes, pry_yr, curr_yr):
-    cur_liabil = trial_bal[trial_bal[ac_type] == curr_liab]
-    cur_liabil = group_sum(cur_liabil, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-    cur_liabil = append_sum_row(cur_liabil, cur_liabil, ac_clss, pry_yr, curr_yr,
-                                tot_name="Total Current liabilities")
-    tot_liab = pd.concat([ncl.iloc[[-1]], cur_liabil.iloc[[-1]]], ignore_index=True)
-    cur_liabil = append_sum_row(tot_liab, cur_liabil, ac_clss, pry_yr, curr_yr, tot_name="Total Liabilities")
-    return cur_liabil
+# def get_curr_liab(trial_bal, ac_type, ncl, curr_liab, ac_clss, ac_codes, pry_yr, curr_yr):
+#     cur_liabil = trial_bal[trial_bal[ac_type] == curr_liab]
+#     cur_liabil = group_sum(cur_liabil, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#     cur_liabil = append_sum_row(cur_liabil, cur_liabil, ac_clss, pry_yr, curr_yr,
+#                                 tot_name="Total Current liabilities")
+#     tot_liab = pd.concat([ncl.iloc[[-1]], cur_liabil.iloc[[-1]]], ignore_index=True)
+#     cur_liabil = append_sum_row(tot_liab, cur_liabil, ac_clss, pry_yr, curr_yr, tot_name="Total Liabilities")
+#     return cur_liabil
 
 
-def get_equity(trial_bal, ac_type, equity, tot_liab_row, ac_clss, fs_class, p_and_l_items, oci_items, oci_class,
-               oci_class_col, ac_codes, pry_yr, curr_yr, ret_earn, oci_res=None):
+# def get_equity(trial_bal, ac_type, equity, tot_liab_row, ac_clss, fs_class, p_and_l_items, oci_items, oci_class,
+#                oci_class_col, ac_codes, pry_yr, curr_yr, ret_earn, oci_res=None):
+#
+#     equi = trial_bal[trial_bal[ac_type] == equity]
+#     equi = group_sum(equi, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
+#
+#     net_inq = inc_stmt(trial_bal, fs_class, p_and_l_items, ac_codes, ac_clss, curr_yr, pry_yr)
+#     oci_non_recl = oci_non_recls(trial_bal, fs_class, oci_items, oci_class_col, oci_class, ac_codes, ac_clss, curr_yr,
+#                                  pry_yr)
+#     oci_recl = oci_reclass(trial_bal, fs_class, oci_items, oci_class_col, oci_class, ac_codes, ac_clss, curr_yr,
+#                            pry_yr)
+#
+#     pr_af_tx = net_inq.iloc[[-1]]
+#     oci_nrecl = oci_non_recl.iloc[[-1]]
+#     oci_reclass_2 = oci_recl.iloc[[-1]]
+#
+#     equi_2 = equi[equi[ac_clss] == ret_earn].index[0]
+#     equi.at[equi_2, curr_yr] += pr_af_tx[curr_yr]
+#     equi.at[equi_2, pry_yr] += pr_af_tx[pry_yr]
+#
+#     equi.at[equi_2, curr_yr] += oci_nrecl[curr_yr]
+#     equi.at[equi_2, pry_yr] += oci_nrecl[pry_yr]
+#
+#     if oci_res is not None:
+#         equi_3 = equi[equi[ac_clss] == oci_res].index[0]
+#         equi.at[equi_3, curr_yr] += oci_reclass_2[curr_yr]
+#         equi.at[equi_3, pry_yr] += oci_reclass_2[pry_yr]
+#
+#     equi = append_sum_row(equi, equi, ac_clss, pry_yr, curr_yr, tot_name="Total Equity")
+#
+#     tot_liab_equ = pd.concat([equi.iloc[[-1]], tot_liab_row.iloc[[-1]]], ignore_index=True)
+#     equi = append_sum_row(tot_liab_equ, equi, ac_clss, pry_yr, curr_yr, tot_name="Total Liabilities and Equity")
+#     return equi
 
-    equi = trial_bal[trial_bal[ac_type] == equity]
-    equi = group_sum(equi, ac_codes, ac_clss, pry_yr, curr_yr, ascending_order=True)
-
-    net_inq = inc_stmt(trial_bal, fs_class, p_and_l_items, ac_codes, ac_clss, curr_yr, pry_yr)
-    oci_non_recl = oci_non_recls(trial_bal, fs_class, oci_items, oci_class_col, oci_class, ac_codes, ac_clss, curr_yr,
-                                 pry_yr)
-    oci_recl = oci_reclass(trial_bal, fs_class, oci_items, oci_class_col, oci_class, ac_codes, ac_clss, curr_yr,
-                           pry_yr)
-
-    pr_af_tx = net_inq.iloc[[-1]]
-    oci_nrecl = oci_non_recl.iloc[[-1]]
-    oci_reclass_2 = oci_recl.iloc[[-1]]
-
-    equi_2 = equi[equi[ac_clss] == ret_earn].index[0]
-    equi.at[equi_2, curr_yr] += pr_af_tx[curr_yr]
-    equi.at[equi_2, pry_yr] += pr_af_tx[pry_yr]
-
-    equi.at[equi_2, curr_yr] += oci_nrecl[curr_yr]
-    equi.at[equi_2, pry_yr] += oci_nrecl[pry_yr]
-
-    if oci_res is not None:
-        equi_3 = equi[equi[ac_clss] == oci_res].index[0]
-        equi.at[equi_3, curr_yr] += oci_reclass_2[curr_yr]
-        equi.at[equi_3, pry_yr] += oci_reclass_2[pry_yr]
-
-    equi = append_sum_row(equi, equi, ac_clss, pry_yr, curr_yr, tot_name="Total Equity")
-
-    tot_liab_equ = pd.concat([equi.iloc[[-1]], tot_liab_row.iloc[[-1]]], ignore_index=True)
-    equi = append_sum_row(tot_liab_equ, equi, ac_clss, pry_yr, curr_yr, tot_name="Total Liabilities and Equity")
-    return equi
-
-def create_bal_sheet(nca, cur_asst, ncl, cur_liabil, equi, ac_clss):
-    bal_sheet = pd.concat([nca, pd.DataFrame(index=range(1)), cur_asst, pd.DataFrame(index=range(1)),
-                           ncl, pd.DataFrame(index=range(1)), cur_liabil, pd.DataFrame(index=range(1)),
-                           equi], ignore_index=True)
-    bal_sheet = bal_sheet.rename(columns={ac_clss: 'Balance sheet'})
-    return bal_sheet
+# def create_bal_sheet(nca, cur_asst, ncl, cur_liabil, equi, ac_clss):
+#     bal_sheet = pd.concat([nca, pd.DataFrame(index=range(1)), cur_asst, pd.DataFrame(index=range(1)),
+#                            ncl, pd.DataFrame(index=range(1)), cur_liabil, pd.DataFrame(index=range(1)),
+#                            equi], ignore_index=True)
+#     bal_sheet = bal_sheet.rename(columns={ac_clss: 'Balance sheet'})
+#     return bal_sheet
 
 
-def det_bal_sht(trial_balance_2, fs_class="", non_curr_ass="", non_curr_liab="",
-                curr_liab="", curr_ass="", equity="", ac_clss="", ac_codes="", ac_type="", pry_yr="", curr_yr="",
-                p_and_l_items="", oci_items="", oci_class='', oci_class_col='', ret_earn='', oci_res=''):
-    trial_balance_2.columns = trial_balance_2.columns.astype(str)
-    non_curr_a = get_non_curr_asset(trial_balance_2, ac_type, non_curr_ass, ac_clss, ac_codes, pry_yr, curr_yr)
-    curr_a = get_curr_asset(trial_balance_2, ac_type, non_curr_a, curr_ass, ac_clss, ac_codes, pry_yr, curr_yr)
-    non_curr_l = get_non_curr_liab(trial_balance_2, ac_type, non_curr_liab, ac_clss, ac_codes, pry_yr, curr_yr)
-    curr_l = get_curr_liab(trial_balance_2, ac_type, non_curr_l, curr_liab, ac_clss, ac_codes, pry_yr, curr_yr)
-    equiii = get_equity(trial_balance_2, ac_type, equity, curr_l, ac_clss, fs_class, p_and_l_items, oci_items, oci_class,
-                        oci_class_col, ac_codes, pry_yr, curr_yr, ret_earn, oci_res)
-
-    bal_shit = create_bal_sheet(non_curr_a, curr_a, non_curr_l, curr_l, equiii, ac_clss)
-
-    return bal_shit
+# def det_bal_sht(trial_balance_2, fs_class="", non_curr_ass="", non_curr_liab="",
+#                 curr_liab="", curr_ass="", equity="", ac_clss="", ac_codes="", ac_type="", pry_yr="", curr_yr="",
+#                 p_and_l_items="", oci_items="", oci_class='', oci_class_col='', ret_earn='', oci_res=''):
+#     trial_balance_2.columns = trial_balance_2.columns.astype(str)
+#     non_curr_a = get_non_curr_asset(trial_balance_2, ac_type, non_curr_ass, ac_clss, ac_codes, pry_yr, curr_yr)
+#     curr_a = get_curr_asset(trial_balance_2, ac_type, non_curr_a, curr_ass, ac_clss, ac_codes, pry_yr, curr_yr)
+#     non_curr_l = get_non_curr_liab(trial_balance_2, ac_type, non_curr_liab, ac_clss, ac_codes, pry_yr, curr_yr)
+#     curr_l = get_curr_liab(trial_balance_2, ac_type, non_curr_l, curr_liab, ac_clss, ac_codes, pry_yr, curr_yr)
+#     equiii = get_equity(trial_balance_2, ac_type, equity, curr_l, ac_clss, fs_class, p_and_l_items, oci_items, oci_class,
+#                         oci_class_col, ac_codes, pry_yr, curr_yr, ret_earn, oci_res)
+#
+#     bal_shit = create_bal_sheet(non_curr_a, curr_a, non_curr_l, curr_l, equiii, ac_clss)
+#
+#     return bal_shit
 
 # To do: Breakdown this functions to different python file. Separate the functions from the input, utilities from the main code
 # Make the user to be able to choose how to round the figures i.e., million, thousand, etc.
-# User should be able to decide the company name
+# User should be able to decide the company name if exporting to excel
 # Remove the income statement from the save function
 # User should only input all variables in the beginning. Therefore, create a separate python file to store variables
 # User should be able to save all declared variables once and be able to make edits rather than inputting the variables always
