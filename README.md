@@ -21,4 +21,4 @@ For now, I am focused on the Income statement and balance sheet. The idea is to 
 1. Amortisation Table
 2. Ratio Analysis
 
-This repository will be updated over time as more functions are built.
+### This repository will be updated over time as more functions are built.
