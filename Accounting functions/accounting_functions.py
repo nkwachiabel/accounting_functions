@@ -18,8 +18,8 @@ def inc_stmt(df, fs_class, p_and_l_items, ac_code, ac_cls, num_conv, rounding=0,
         rounding: how many decimal place. If the rounding is zero, an integer is returned.
         positive: based on the class of account, should the data return a positive or negative number?
         """
-    result = acct_summary(df, fs_class, p_and_l_items, ac_code, ac_cls, num_conv, rounding=rounding,
-                          positive=positive, sort_order=True, sum_row=sum_r)
+    result = acct_summary(df, fs_class, p_and_l_items, ac_code, ac_cls, num_conv, rounding=rounding, positive=positive,
+                          sort_order=True, sum_row=sum_r)
     return result
 
 def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, oci_rcls, oci_nrcl,

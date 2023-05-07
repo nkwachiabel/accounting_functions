@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import filedialog
 # Include utilities like save function, get file function, formatting functions, etc
 
-def acct_summary(df, class_col, clas_item, ac_code, ac_cls, num_conv, rounding=0, positive=True, sort_order=False,
+def acct_summary(df, class_col, clas_item, ac_code, ac_cls, num_conv=1, rounding=0, positive=True, sort_order=False,
                  sum_row='Total'):
     """
     This function provides a summary of an item. It receives the trial balance as a dataset based on specification
@@ -133,23 +133,27 @@ def save_file(df, default_name='output', sheet_name='Sheet1'):  # formats=None):
     writer.save()
 
 def append_sum_row(df, df2, ac_cls, tot_name=""):
+    numeric_cols = df.select_dtypes(include=['number'])
     net_row = pd.concat([df.iloc[[-1]], df2.iloc[[-1]]], ignore_index=True)
     total_row = net_row.select_dtypes(include=['number']).sum()
     total_row[ac_cls] = tot_name
     net_row = pd.concat([df2, total_row.to_frame().T], ignore_index=True)
+    net_row[numeric_cols.columns] = net_row[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
     return net_row
 
 def get_gross_profit(tb, ac_cls, revenue, cos_of_sale, fs_class, p_and_l, ac_code, num_conv, rounding):
     grs_pro = tb.copy()
     grs_pro = grs_pro[grs_pro[ac_cls].isin([revenue, cos_of_sale])]
-    grs_pro = acct_summary(grs_pro, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Gross Profit')
+    grs_pro = acct_summary(grs_pro, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Gross Profit')
     return grs_pro
 
 def get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, fs_class, p_and_l,
                      ac_code, num_conv, rounding, grs_pro):
     other_inc = tb.copy()
     other_inc = other_inc[~other_inc[ac_cls].isin([revenue, cos_of_sale, fin_income, int_expense, income_tax])]
-    other_inc = acct_summary(other_inc, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='')
+    other_inc = acct_summary(other_inc, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                             sort_order=True, sum_row='')
     numeric_cols = other_inc.select_dtypes(include=['number'])
     other_inc = append_sum_row(grs_pro, other_inc, ac_cls, tot_name="Operating Profit/(loss)")
     other_inc[numeric_cols.columns] = other_inc[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
@@ -158,7 +162,8 @@ def get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, 
 def get_profit_before_tax(tb, ac_cls, fin_income, int_expense, fs_class, p_and_l, ac_code, num_conv, rounding, opr_pr_los):
     pbt = tb.copy()
     pbt = pbt[pbt[ac_cls].isin([fin_income, int_expense])]
-    pbt = acct_summary(pbt, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Net interest income/(cost)')
+    pbt = acct_summary(pbt, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                       sort_order=True, sum_row='Net interest income/(cost)')
     numeric_cols = pbt.select_dtypes(include=['number'])
     pbt = append_sum_row(opr_pr_los, pbt, ac_cls, tot_name="Profit before tax")
     pbt[numeric_cols.columns] = pbt[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
@@ -167,8 +172,8 @@ def get_profit_before_tax(tb, ac_cls, fin_income, int_expense, fs_class, p_and_l
 def get_income_tax(tb, ac_cls, income_tax, fs_class, p_and_l, ac_code, num_conv, rounding, pr_b4_tx):
     inc_tax = tb.copy()
     inc_tax = inc_tax[inc_tax[ac_cls].isin([income_tax])]
-    inc_tax = acct_summary(inc_tax, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True,
-                           sum_row='Tax (expense)/income')
+    inc_tax = acct_summary(inc_tax, fs_class, p_and_l, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Tax (expense)/income')
     inc_tax = inc_tax.iloc[:-1]
     numeric_cols = inc_tax.select_dtypes(include=['number'])
     inc_tax = append_sum_row(pr_b4_tx, inc_tax, ac_cls, tot_name="Profit for the year")
@@ -183,7 +188,8 @@ def get_oci_no_reclass(tb, ac_cls, fs_class, oci_no_rcls, ac_code, num_conv, rou
     elif oci_rcls is not None:
         oci = tb.copy()
         oci = oci[oci[fs_class].isin([oci_no_rcls])]
-        oci = acct_summary(oci, fs_class, oci_no_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Items that will not be reclassified')
+        oci = acct_summary(oci, fs_class, oci_no_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Items that will not be reclassified')
         numeric_cols = oci.select_dtypes(include=['number'])
         oci = append_sum_row(pr_af_tax, oci, ac_cls, tot_name="Total comprehensive income")
         oci[numeric_cols.columns] = oci[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
@@ -191,7 +197,8 @@ def get_oci_no_reclass(tb, ac_cls, fs_class, oci_no_rcls, ac_code, num_conv, rou
     else:
         oci = tb.copy()
         oci = oci[oci[fs_class].isin([oci_no_rcls])]
-        oci = acct_summary(oci, fs_class, oci_no_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Items that will not be reclassified')
+        oci = acct_summary(oci, fs_class, oci_no_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Items that will not be reclassified')
         numeric_cols = oci.select_dtypes(include=['number'])
         oci = append_sum_row(pr_af_tax, oci, ac_cls, tot_name="Total comprehensive income")
         oci[numeric_cols.columns] = oci[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
@@ -204,7 +211,8 @@ def get_oci_reclass(tb, ac_cls, fs_class, oci_rcls, ac_code, num_conv, rounding,
 
     elif oci_rcls is not None and oci_no_rcls is not None:
         oci = tb.copy()
-        oci = acct_summary(oci, fs_class, oci_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Items that may be reclassified')
+        oci = acct_summary(oci, fs_class, oci_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Items that may be reclassified')
         numeric_cols = oci.select_dtypes(include=['number'])
         oci = append_sum_row(oci_no_rcls, oci, ac_cls, tot_name="Total other comprehensive income")
         oci[numeric_cols.columns] = oci[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
@@ -214,7 +222,8 @@ def get_oci_reclass(tb, ac_cls, fs_class, oci_rcls, ac_code, num_conv, rounding,
     else:
         oci = tb.copy()
         oci = oci[oci[fs_class].isin([oci_rcls])]
-        oci = acct_summary(oci, fs_class, oci_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False, sort_order=True, sum_row='Other Comprehensive Income')
+        oci = acct_summary(oci, fs_class, oci_rcls, ac_code, ac_cls, num_conv, rounding=rounding, positive=False,
+                           sort_order=True, sum_row='Other Comprehensive Income')
         numeric_cols = oci.select_dtypes(include=['number'])
         oci = append_sum_row(pr_af_tax, oci, ac_cls, tot_name="Total comprehensive income")
         oci[numeric_cols.columns] = oci[numeric_cols.columns].apply(pd.to_numeric, errors='coerce')
