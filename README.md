@@ -5,6 +5,7 @@ This repository is an attempt to automate some accounting tasks and give some ti
 1. Preparing the income statement, balance sheet and notes from the trial balance
 2. Preparing loan amortisation tables for various loans 
 3. Ratio analysis (Profitability ratio, Solvency ratio, Efficiency ratio and Leverage ratio)
+4. Any other accounting function which is done regularly/repeatedly
 
 # Prepare a more detailed financial statement from the trial balance. 
 
@@ -15,13 +16,15 @@ For now, I am focused on the Income statement and balance sheet. The idea is to 
 
 # Completed
 1. Income statement
-2. Balance sheet - 8th May '23
+2. Balance sheet
 
 # Not started
 1. Amortisation Table
 2. Ratio Analysis
 
 # Considerations
-1. Rounding error in the balance sheet - If the figures are rounded, how do I manage this in the functions when the total assets != total liabilities and equities? The best option is to ensure the figures are rounded in the trial balance and the balance sheet is == 0. This will avoid the rounding error.
+1. Should the User round the trial balance first before using the function? This will avoid the rounding error.
+2. Include a check in the balance sheet to confirm if it is balanced
+3. Can this functions be converted into an application so that others can use it?
 
 ### This repository will be updated over time as more functions are built.
