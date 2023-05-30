@@ -22,6 +22,7 @@ def inc_stmt(df, fs_class, p_and_l_items, ac_code, ac_cls, num_conv, rounding=0,
 
 def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax, oci_rcls, oci_nrcl,
                  fs_class, p_and_l, ac_code, num_conv, rounding):
+
     grs_pro = get_gross_profit(tb, ac_cls, revenue, cos_of_sale, fs_class, p_and_l, ac_code, num_conv, rounding)
     opr_pr_los = get_oper_pr_loss(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, income_tax,
                                   fs_class, p_and_l, ac_code, num_conv, rounding, grs_pro)
@@ -31,14 +32,8 @@ def det_inc_stmt(tb, ac_cls, revenue, cos_of_sale, fin_income, int_expense, inco
     oci_nrcl = get_oci_no_reclass(tb, ac_cls, fs_class, oci_nrcl, ac_code, num_conv, rounding, pr_af_tax, oci_rcls)
     oci_reclass = get_oci_reclass(tb, ac_cls, fs_class, oci_rcls, ac_code, num_conv, rounding, pr_af_tax, oci_nrcl)
 
-    income_statement = create_income_statement(grs_pro, opr_pr_los, pr_b4_tx, pr_af_tax, oci_nrcl, oci_reclass)
-
-    numeric_cols_2 = income_statement.select_dtypes(include=['number'])
-    if rounding == 0:
-        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(int)
-    else:
-        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(float)
-    income_statement[numeric_cols_2.columns] = numeric_cols_2
+    income_statement = [grs_pro, opr_pr_los, pr_b4_tx, pr_af_tax, oci_nrcl, oci_reclass]
+    save_file(income_statement, sheet_name='Income Statement')
 
     return income_statement
 
@@ -66,9 +61,9 @@ def det_bal_sheet(tb, account_type, current_asset, non_current_asset, current_li
 
     numeric_cols_2 = balance_sheet.select_dtypes(include=['number'])
     if rounding == 0:
-        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(int)
+        balance_sheet[numeric_cols_2.columns] = numeric_cols_2.astype(float).astype('Int64')
     else:
-        numeric_cols_2 = numeric_cols_2.fillna(0).replace([np.inf, -np.inf], 0).round(rounding).astype(float)
+        balance_sheet[numeric_cols_2.columns] = numeric_cols_2.astype(float).round(rounding)
     balance_sheet[numeric_cols_2.columns] = numeric_cols_2
 
     return balance_sheet

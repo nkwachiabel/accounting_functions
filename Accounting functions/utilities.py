@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import xlsxwriter
 import tkinter as tk
 from tkinter import filedialog
 
@@ -69,8 +70,7 @@ def format_excel_file(workbook, sheet_name, df):
 
 
 def create_money_format(workbook):
-    money_formats = workbook.add_format(
-        {'num_format': '#,##0.00_);[Red](#,##0.00)', 'align': 'vjustify', 'valign': 'right'})
+    money_formats = workbook.add_format({'num_format': '#,##_);(#,##)', 'align': 'vjustify', 'valign': 'right'})
     return money_formats
 
 def create_percent_format(workbook):
@@ -82,29 +82,28 @@ def create_header_format(workbook):
     return header_formats
 
 def create_total_format(workbook):
-    total_formats = workbook.add_format({'bold': True, 'num_format': '#,##0.00_);[Red](#,##0.00)'})
+    total_formats = workbook.add_format({'num_format': '#,##_);(#,##)', 'bold':True})
     return total_formats
 
 def create_normal_format(workbook):
-    normal_formats = workbook.add_format({'align': 'left', 'valign': 'vjustify'})
+    normal_formats = workbook.add_format({'align': 'vjustify', 'valign': 'left'})
     return normal_formats
 
 
-def save_file(df, default_name='output', sheet_name='Sheet1'):  # formats=None):
+def save_file(dfs, default_name='output', sheet_name='Sheet1'):
     # create file dialog for saving file
     root = tk.Tk()
     root.attributes('-topmost', True)
     root.withdraw()
     file_name = filedialog.asksaveasfilename(initialfile=default_name, defaultextension=".xlsx",
                                              filetypes=[("Excel Workbook", "*.xlsx")])
+
     # check if user cancelled file dialog
     if file_name == "":
         return
 
+    # Create an ExcelWriter object
     writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
-    start_row = 3
-    last_row = df.shape[0] + start_row
-    df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=start_row)
     workbook = writer.book
 
     money_format = create_money_format(workbook)
@@ -113,24 +112,45 @@ def save_file(df, default_name='output', sheet_name='Sheet1'):  # formats=None):
     total_format = create_total_format(workbook)
     normal_format = create_normal_format(workbook)
 
-    worksheet = writer.sheets[sheet_name]
-    worksheet.write(0, 0, 'ABC LIMITED', header_format)
-    worksheet.write(1, 0, 'INCOME STATEMENT FOR THE YEAR ENDED 20X1', header_format)
-    worksheet.set_row(last_row, None, total_format)
-    worksheet.set_zoom(100)
+    # Initialize the starting row
+    start_row = 4
+    last_row_index = start_row - 1
 
-    for i, col in enumerate(df.columns):
-        column_len = max(df[col].astype(str).map(len).max(), len(col))
-        worksheet.set_column(i, i, column_len + 2)
+    # Iterate over the DataFrames
+    for i, df in enumerate(dfs):
+        if df is not None:
+            # Add the header of the numeric columns to the start of the first dataframe
+            if i == 0:
+                header_df = pd.DataFrame(columns=df.columns)
+                header_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row - 1, header=True, index=False)
 
-        if df[col].dtype == 'float64' or 'int':
-            worksheet.set_column(i, i, 21, money_format)
-        elif col == 'Percentage':
-            worksheet.set_column(i, i, None, percent_format)
-        else:
-            worksheet.set_column(i, i, 50, normal_format)
+            # Write the DataFrame to the ExcelWriter
+            df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, header=False, index=False)
 
-    worksheet.set_column('A:A', 50, normal_format)
+            # Apply money format to the numeric columns
+            for j, col in enumerate(df.columns):
+                column_len = max(df[col].astype(str).map(len).max(), len(col))
+                writer.sheets[sheet_name].set_column(j, j, column_len + 2)
+
+                if df[col].dtype == 'float64' or 'int':
+                    writer.sheets[sheet_name].set_column(j, j, 21, money_format)
+
+            # Apply header format to the header row
+            writer.sheets[sheet_name].set_row(start_row - 1, None, header_format)
+
+            # Get the last row index
+            last_row_index = start_row + df.shape[0] - 1
+
+            # Apply bold format to the last row
+            writer.sheets[sheet_name].set_row(last_row_index, None, total_format)
+
+            # Update the starting row for the next DataFrame
+            start_row += df.shape[0] + 1
+
+    col_format = writer.book.add_format({'align': 'vjustify', 'valign': 'left'})
+    writer.sheets[sheet_name].set_column('A:A', 50, col_format)
+
+    # Save the Excel file
     writer.save()
 
 def append_sum_row(df, df2, ac_cls, tot_name=""):
