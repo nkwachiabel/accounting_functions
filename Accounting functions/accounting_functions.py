@@ -47,23 +47,24 @@ def det_bal_sheet(tb, account_type, current_asset, non_current_asset, current_li
     non_curr_asst = get_non_current_assets(tb, account_type, non_current_asset, account_code, account_class,
                                            number_converter, rounding, non_current_asset_order)
 
+    total_assets = append_sum_row(non_curr_asst, curr_asst, account_class, tot_name="Total assets")
+
     curr_liab = get_current_liabilities(tb, account_type, current_liability, account_code, account_class,
                                         number_converter, rounding, current_liability_order)
 
     non_curr_liab = get_non_current_liabilities(tb, account_type, non_current_liability, account_code, account_class,
                                                 number_converter, rounding, non_current_liability_order)
 
+    total_liabilities = append_sum_row(non_curr_liab, curr_liab, account_class, tot_name="Total liabilities")
+
     equity = get_equity(tb, account_type, equity, fs_classification, income_statement_items, account_code,
                         account_class, retained_earnings, number_converter, rounding, oci_to_oci,
                         oci_to_retained_earnings, oci_reserves, equity_order)
 
-    balance_sheet = create_balance_sheet(non_curr_asst, curr_asst, non_curr_liab, curr_liab, equity, account_class)
+    total_liabilities_and_equity = append_sum_row(total_liabilities, equity, account_class, tot_name="Total liabilities and equity")
 
-    numeric_cols_2 = balance_sheet.select_dtypes(include=['number'])
-    if rounding == 0:
-        balance_sheet[numeric_cols_2.columns] = numeric_cols_2.astype(float).astype('Int64')
-    else:
-        balance_sheet[numeric_cols_2.columns] = numeric_cols_2.astype(float).round(rounding)
-    balance_sheet[numeric_cols_2.columns] = numeric_cols_2
+    bs_dataframe = [non_curr_asst, total_assets, non_curr_liab, total_liabilities, total_liabilities_and_equity]
 
-    return balance_sheet
+    save_file(bs_dataframe, sheet_name='Balance Sheet')
+
+    return bs_dataframe

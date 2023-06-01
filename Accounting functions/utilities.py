@@ -82,7 +82,7 @@ def create_header_format(workbook):
     return header_formats
 
 def create_total_format(workbook):
-    total_formats = workbook.add_format({'num_format': '#,##_);(#,##)', 'bold':True})
+    total_formats = workbook.add_format({'num_format': '#,##_);(#,##)', 'bold': True})
     return total_formats
 
 def create_normal_format(workbook):
